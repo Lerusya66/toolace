@@ -3,4 +3,4 @@ venv
 
 secrets
 
-.DS_store
+.DS_store.DS_Store
