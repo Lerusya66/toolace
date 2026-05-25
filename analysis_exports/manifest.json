@@ -1,0 +1,12 @@
+{
+  "files": {
+    "summary_metrics.csv": "overall metrics for each method",
+    "by_type_metrics.csv": "metrics broken down by corruption type",
+    "test_predictions_lexical.csv": "full lexical baseline predictions on test set",
+    "test_predictions_lettuce.csv": "full LettuceDetect-based predictions on test set",
+    "test_predictions_lookback.csv": "full LookBack-style predictions on test set",
+    "test_predictions_ensemble.csv": "full ensemble predictions on test set",
+    "ensemble_false_positives.csv": "ensemble mistakes where clean sample was flagged",
+    "ensemble_false_negatives.csv": "ensemble misses on hallucinated samples"
+  }
+}
