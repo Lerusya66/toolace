@@ -10,16 +10,6 @@ Code for this project can be found in this [repository](https://github.com/hrbar
 **Hritendu Russo Baruri**
 
 ## 1. Motivation 
-This notebook upgrades the original baseline evaluation in three ways:
-
-1. It rebuilds the clean ToolACE split directly from the original dataset.
-2. It evaluates on a combined benchmark made of `clean + 3 hallucination datasets` from `datasets/`.
-3. It trains stronger sample-level detectors on real labels and reports both overall and per-type metrics.
-
-The goal is to benchmark hallucination detection for:
-- `tool_output_contradiction`
-- `overgeneration`
-- `missing_tool`
 
 ### Hallucinations and Tools
 #### Tools
@@ -39,9 +29,7 @@ LLMs grounded by tool APIs can still fabricate or distort facts in their final r
         `"Would you like me to book a ticket?"` 
     but no booking tool is present.
 
-LLMs grounded by tool APIs can still fabricate or distort facts in their final response, even when correct data was returned.
-
-Existing detection methods were not designed for tool-calling dialogues and have no span-level benchmarks for this setting.
+Existing hallucination detection methods were not designed for tool-calling dialogues and have no span-level benchmarks for this setting, which is exactly the problem this project addresses.
 
 --- 
 
@@ -49,17 +37,16 @@ Existing detection methods were not designed for tool-calling dialogues and have
 
 ### Improved Hallucination Detection Baselines
 
-This notebook upgrades the original baseline evaluation framework by introducing a multi-layered benchmark that incorporates lexical token alignment, transformer-based token classification backbones, and attention-guided contextual lens ratios. To evaluate the resilience of dialogue systems operating under complex tool-assisted workflows, our methodology focuses on both sample-level and span-level detection of fine-grained hallucinations.
+We upgrade the original baseline evaluation framework by introducing a multi-layered benchmark that incorporates lexical token alignment, transformer-based token classification backbones, and attention-guided contextual lens ratios. To evaluate the resilience of dialogue systems operating under complex tool-assisted workflows, our methodology focuses on both sample-level and span-level detection of fine-grained hallucinations.
 
 The methodology is structured across the following core pillars:
 
-1. **Dataset Rehabilitation and Schema Integration**: We rebuild the clean evaluation splits directly from the raw ToolACE dataset. Following the task specification, the dialogue turns are framed as structural triplets consisting of the user Query, the execution output of the tools as Context, and the model's final response as Output. Ground-truth span annotations are structured in alignment with the RAGTruth schema across three target corruption scenarios:
-   - **Tool Output Contradiction**: Direct factual discrepancies between the model's natural language response and the tool payload.
+1. **Dataset Rehabilitation and Schema Integration**: We rebuild the clean evaluation splits directly from the raw ToolACE dataset. The dialogue turns from the original dataset are framed as structural triplets consisting of the user Query, the execution output of the tools as Context, and the model's final response as Output. Ground-truth span annotations are structured in alignment with the RAGTruth schema across three target corruption scenarios:
+   - **Tool Output Contradiction**: Direct factual discrepancies between the model's natural language response and the tool payload. To generate such hallucinations, the large language model (gpt-o4-mini) was asked to mildly modify the final response such that it contradicts the tool output.
    
-   - **Overgeneration**: Unverified assertions or speculative facts introduced by the model that are completely absent from the tool context.
+   - **Overgeneration**: Unverified assertions or speculative facts introduced by the model that are completely absent from the tool context. Hallucinations of these type were generated in two steps. First, Llama-3.1 (8B) was asked to generate additional fact related to the user request but not supported by the tool response. Then, the generated fact was added to the final response programmatically to ensure the correctness of the extracted hallucinated span.
    
-   - **Missing Tool**: Actions suggested by the model that imply or require the activation of an unavailable tool API.
-   
+   - **Missing Tool**: Actions suggested by the model that imply or require the activation of an unavailable tool API. Hallucinations of these type were generated similar to the overgeneration data, but this time the LLM (Llama-3.1 (8B)) was given the list of available tools and asked to generate an offer to do something that would require tool absent from this list. 
 
 2. **Multi-Model Baseline Extensions**: Rather than relying strictly on raw out-of-the-box predictions, we evaluate and optimize several architectural archetypes:
    - **Lexical Span Verifier**: A non-parametric, exact-match lookup baseline that evaluates token-level overlap and flags sub-strings failing lexical alignment with tool contexts.
@@ -69,7 +56,7 @@ The methodology is structured across the following core pillars:
    - **LookBack-Span Supervised Detector**: Powered by a dense generative language model backbone (`Qwen/Qwen2.5-0.5B`), this approach extracts inner attention layers to compute lookback ratios. It evaluates how heavily the model attends to the input context versus its own historical generation tokens.
    
    - **Soft-Vote Ensemble**: A collaborative combination that synthesizes sample-level probabilities across the individual supervised models to maximize precision, control false-positive rates, and boost the overall Area Under the Receiver Operating Characteristic curve (AUROC).
-   
+
 
 ---
 
@@ -102,4 +89,16 @@ By introducing the supervised span training paradigm and merging their outputs i
 
 - **Robustness Against Missing Tools**: For the challenging `missing_tool` hallucination category, the ensemble manages an accuracy of **63.3%** and an F1 score of **54.8%** (Precision = 0.5679, Recall = 0.5287). This proves that synthesizing inner attention-based contextual awareness with dense token-level representations allows the detector to reliably capture abstract structural anomalies—such as an assistant proposing actions without tool support—alongside explicit factual contradictions.
 
+---
+
+## 4. Repository Content
+
+- `hallucination_detection_final.ipynb`: Jupyter notebook with the code for this project. It
+1. Rebuilds the clean ToolACE split directly from the original dataset.
+2. Evaluates on a combined benchmark made of `clean + 3 hallucination datasets` from `datasets/`.
+3. Trains stronger sample-level detectors on real labels and reports both overall and per-type metrics.
+- `datasets`: folder containing generated datasets
+
+
+   
 
