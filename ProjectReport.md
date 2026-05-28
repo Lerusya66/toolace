@@ -35,6 +35,28 @@ Existing hallucination detection methods were not designed for tool-calling dial
 
 # 2 Methodology
 
+## About the baselines
+### Baseline A: LettuceDetect
+`LettuceDetect` (KR Labs, 2025) is a token-classification model built on ModernBERT. Given a (question, context, answer) triple it assigns each answer token a hallucination probability.
+- Model: KRLabsOrg/lettuce-detect-base-v2 (or -large-v2)
+- Input: question, list of context passages, answer
+- Output: per-token hallucination scores + hallucinated spans
+
+Reference: [LettuceDetect](https://arxiv.org/pdf/2502.17125)
+### Baseline B: LookBackLens
+**LookBackLens** (Tang et al., 2024) uses the *lookback ratio* as a hallucination signal. For each answer token at position $t$:
+
+$$\text{LookbackRatio}(t) = \frac{\sum_{k < |\text{context}|} A_{t,k}}{\sum_{k < |\text{context}|} A_{t,k} \;+\; \sum_{|\text{context}| \le k < t} A_{t,k}}$$
+
+where $A_{t,k}$ is the averaged attention weight from the token at position $t$ to position $k$ (averaged over all layers and heads).
+
+- **High ratio** → the model is attending to the provided context → likely grounded
+- **Low ratio** → the model is attending to its own prior generation → potential hallucination
+
+The original paper trains a linear classifier on per-layer/per-head lookback ratio vectors using Llama-2-7B. Below we implement the core algorithm for **GPT-2** (accessible without large-model downloads) and use a simple logistic-regression classifier trained on aggregate ratio features. To reproduce the paper's exact numbers, replace `MODEL_NAME` with `meta-llama/Llama-2-7b-chat-hf` and provide the paper's pre-trained classifier weights.
+
+Reference: [original paper](https://arxiv.org/abs/2407.07071); [Code](https://github.com/amazon-science/lookback-lens)
+
 ### Improved Hallucination Detection Baselines
 
 We upgrade the original baseline evaluation framework by introducing a multi-layered benchmark that incorporates lexical token alignment, transformer-based token classification backbones, and attention-guided contextual lens ratios. To evaluate the resilience of dialogue systems operating under complex tool-assisted workflows, our methodology focuses on both sample-level and span-level detection of fine-grained hallucinations.
